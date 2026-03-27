@@ -944,11 +944,18 @@ function pickTrivia(btn, chosen, correct, container) {
     
     // Reset score to 0 and restart with 7 new questions if wrong answer
     d20Score = 0;
-    d20Questions = triviaPool.sort(() => Math.random() - .5).slice(0, 7);
+    d20Questions = triviaPool.sort(() => Math.random() - .5).slice(0, 7); // Re-initialize with new questions
     d20QIndex = 0;
     document.getElementById('d20-score').textContent = d20Score;
     document.getElementById('d20-qnum').textContent = 1;
-  }
+    
+    // Clear and regenerate question area with new questions
+    document.getElementById('d20-question-area').style.display = 'none';
+    document.getElementById('d20-modifier-row').innerHTML = '';
+    const die = document.getElementById('d20');
+    die.textContent = '🎲'; 
+    die.className = 'd20'; 
+    die.onclick = rollDie;
 
   d20QIndex++;
   if (d20QIndex >= 7) {
