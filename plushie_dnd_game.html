@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Birthday Dungeon</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0a06;--bg2:#1a1208;--bg3:#241a0e;
+  --parch:#f5e6c8;--parch2:#e8d5a8;
+  --gold:#d4a017;--gold2:#f0c040;--gold-dim:#8a6510;
+  --red:#8b1a1a;--red2:#c0392b;
+  --green:#1a5c2a;--green2:#2ecc71;
+  --stone:#3a3028;--stone2:#5a4a38;
+  --txt:#2a1a08;--tp:#4a3010;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'EB Garamond',serif;
+  background:var(--bg);
+  color:var(--parch);
+  min-height:100vh;
+  overflow-x:hidden;
+  background-image:radial-gradient(ellipse at 20% 20%,rgba(212,160,23,.05) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(139,26,26,.07) 0%,transparent 60%);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes flicker{0%,100%{opacity:1}33%{opacity:.82}66%{opacity:.93}88%{opacity:.78}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes spinDie{0%{transform:rotate(0deg) scale(1)}50%{transform:rotate(360deg) scale(1.4)}100%{transform:rotate(720deg) scale(1)}}
+@keyframes glow{0%,100%{text-shadow:0 0 12px var(--gold),0 0 30px rgba(212,160,23,.4)}50%{text-shadow:0 0 24px var(--gold2),0 0 60px rgba(240,192,64,.6)}}
+@keyframes torchPulse{0%,100%{box-shadow:0 0 28px 10px rgba(255,140,0,.35),0 0 60px 20px rgba(255,80,0,.18)}50%{box-shadow:0 0 40px 16px rgba(255,170,0,.45),0 0 80px 30px rgba(255,120,0,.25)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(0.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;position:relative;z-index:1;}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn .6s ease forwards;}
+
+/* ── TORCH CORNERS ── */
+.torch{position:fixed;font-size:2rem;animation:flicker 2.4s infinite,torchPulse 3s infinite;z-index:10;pointer-events:none;}
+.torch.tl{top:18px;left:22px;}
+.torch.tr{top:18px;right:22px;}
+.torch.bl{bottom:18px;left:22px;}
+.torch.br{bottom:18px;right:22px;}
+
+/* ── PARCHMENT CARD ── */
+.parch-card{
+  background:linear-gradient(145deg,#f5e6c8,#e8d4a0,#f0ddb8);
+  color:var(--txt);
+  border-radius:4px;
+  padding:2.2rem 2.8rem;
+  max-width:680px;width:90%;
+  box-shadow:0 0 0 2px var(--gold-dim),0 0 0 5px rgba(212,160,23,.18),0 8px 40px rgba(0,0,0,.7),inset 0 0 60px rgba(180,130,40,.12);
+  position:relative;
+  animation:slideUp .7s ease forwards;
+}
+.parch-card::before,.parch-card::after{
+  content:'❧';
+  position:absolute;
+  font-size:1.4rem;
+  color:var(--gold-dim);
+  opacity:.6;
+}
+.parch-card::before{top:12px;left:16px;}
+.parch-card::after{bottom:12px;right:16px;transform:rotate(180deg);}
+
+/* ── TITLE SCREEN ── */
+.dungeon-title{
+  font-family:'Cinzel Decorative',cursive;
+  font-size:clamp(1.8rem,5vw,3.2rem);
+  color:var(--gold2);
+  text-align:center;
+  animation:glow 3s infinite;
+  line-height:1.3;
+  margin-bottom:.4rem;
+}
+.dungeon-sub{
+  font-family:'Cinzel',serif;
+  font-size:1rem;
+  color:var(--parch2);
+  text-align:center;
+  letter-spacing:.18em;
+  margin-bottom:2rem;
+  opacity:.75;
+}
+.divider{
+  text-align:center;
+  color:var(--gold-dim);
+  font-size:1.1rem;
+  margin:.8rem 0;
+  letter-spacing:.3em;
+}
+
+/* ── BUTTONS ── */
+.btn{
+  font-family:'Cinzel',serif;
+  font-size:1rem;
+  padding:.75rem 2.2rem;
+  border-radius:3px;
+  cursor:pointer;
+  border:none;
+  transition:all .2s;
+  letter-spacing:.08em;
+  position:relative;
+  overflow:hidden;
+}
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold-dim),var(--gold),var(--gold-dim));
+  color:#1a0e00;
+  box-shadow:0 0 14px rgba(212,160,23,.4),0 3px 12px rgba(0,0,0,.5);
+}
+.btn-gold:hover{background:linear-gradient(135deg,var(--gold),var(--gold2),var(--gold));transform:translateY(-2px);box-shadow:0 0 24px rgba(212,160,23,.6),0 6px 18px rgba(0,0,0,.5);}
+.btn-stone{
+  background:linear-gradient(135deg,var(--stone),var(--stone2));
+  color:var(--parch);
+  border:1px solid var(--gold-dim);
+  box-shadow:0 3px 12px rgba(0,0,0,.5);
+}
+.btn-stone:hover{background:linear-gradient(135deg,var(--stone2),#6a5a48);transform:translateY(-2px);}
+.btn-red{
+  background:linear-gradient(135deg,var(--red),#a52020);
+  color:var(--parch);
+  box-shadow:0 0 14px rgba(139,26,26,.5);
+}
+.btn-red:hover{background:linear-gradient(135deg,#a52020,#c03030);transform:translateY(-2px);}
+
+/* ── RIDDLE GATE ── */
+.riddle-title{font-family:'Cinzel',serif;font-size:1.3rem;font-weight:700;color:var(--tp);margin-bottom:.5rem;text-align:center;}
+.riddle-label{font-size:.8rem;font-family:'Cinzel',serif;letter-spacing:.15em;color:var(--gold-dim);text-align:center;margin-bottom:.3rem;}
+.riddle-scroll{
+  background:rgba(180,130,40,.12);
+  border:1px solid rgba(180,130,40,.3);
+  border-radius:3px;
+  padding:1.2rem 1.5rem;
+  margin:1rem 0;
+  font-size:1.1rem;
+  font-style:italic;
+  line-height:1.85;
+  color:var(--tp);
+  text-align:center;
+}
+.riddle-scroll b{font-style:normal;color:var(--red);}
+.answer-row{display:flex;gap:.7rem;margin-top:1rem;}
+.answer-input{
+  flex:1;
+  font-family:'EB Garamond',serif;
+  font-size:1.1rem;
+  padding:.6rem 1rem;
+  border:1px solid var(--gold-dim);
+  border-radius:3px;
+  background:rgba(245,230,200,.9);
+  color:var(--txt);
+  outline:none;
+}
+.answer-input:focus{border-color:var(--gold);box-shadow:0 0 10px rgba(212,160,23,.3);}
+.feedback{
+  margin-top:.8rem;
+  text-align:center;
+  font-size:1rem;
+  min-height:1.4rem;
+  font-family:'Cinzel',serif;
+  letter-spacing:.05em;
+  transition:all .3s;
+}
+.feedback.wrong{color:var(--red2);animation:shake .5s ease;}
+.feedback.right{color:var(--green2);}
+
+/* ── KEY REVEAL ── */
+.key-reveal{
+  display:flex;flex-direction:column;align-items:center;gap:.6rem;
+  padding:1.5rem;margin-top:1rem;
+  background:rgba(30,20,5,.4);
+  border:1px solid var(--gold);
+  border-radius:4px;
+  box-shadow:inset 0 0 30px rgba(212,160,23,.08),0 0 20px rgba(212,160,23,.2);
+}
+.key-glyph{font-size:3rem;animation:float 2.5s infinite,glow 3s infinite;}
+.key-word{font-family:'Cinzel',serif;font-size:1.4rem;color:var(--gold2);letter-spacing:.3em;animation:glow 3s infinite;}
+.key-desc{font-size:.9rem;color:var(--parch2);opacity:.7;font-style:italic;}
+
+/* ── PROGRESS BAR ── */
+.progress-row{display:flex;gap:.5rem;justify-content:center;margin-bottom:1.5rem;}
+.progress-pip{
+  width:36px;height:10px;border-radius:5px;
+  background:var(--stone);
+  border:1px solid var(--gold-dim);
+  transition:background .4s;
+}
+.progress-pip.done{background:linear-gradient(90deg,var(--gold-dim),var(--gold));}
+.progress-pip.active{background:var(--gold2);animation:pulse 1.2s infinite;}
+
+/* ── SECTION HEADER ── */
+.sect-title{
+  font-family:'Cinzel Decorative',cursive;
+  font-size:clamp(1.2rem,3.5vw,2rem);
+  color:var(--gold2);
+  text-align:center;
+  animation:glow 3s infinite;
+  margin-bottom:.3rem;
+}
+.sect-sub{font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.18em;color:var(--parch2);text-align:center;opacity:.65;margin-bottom:1.2rem;}
+
+/* ── GAME 1: DRAGON MEMORY ── */
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:400px;width:100%;margin:1rem auto;}
+.mem-card{
+  aspect-ratio:1;border-radius:6px;cursor:pointer;
+  background:linear-gradient(135deg,#2a1a3e,#1a0e28);
+  border:1.5px solid var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;
+  transition:transform .15s,box-shadow .15s;
+  user-select:none;
+  position:relative;
+  box-shadow:0 3px 10px rgba(0,0,0,.5);
+}
+.mem-card .front{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;backface-visibility:hidden;}
+.mem-card .back{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1rem;backface-visibility:hidden;background:linear-gradient(135deg,var(--stone),var(--stone2));border-radius:5px;color:var(--gold-dim);}
+.mem-card:hover:not(.flipped):not(.matched){transform:scale(1.06);box-shadow:0 0 14px rgba(212,160,23,.3);}
+.mem-card.flipped .back,.mem-card.matched .back{display:none;}
+.mem-card.flipped .front,.mem-card.matched .front{display:flex;}
+.mem-card.matched{border-color:var(--gold2);box-shadow:0 0 16px rgba(212,160,23,.5);}
+.mem-card:not(.flipped):not(.matched) .front{display:none;}
+.mem-stats{display:flex;gap:1.5rem;justify-content:center;font-family:'Cinzel',serif;font-size:.9rem;color:var(--parch2);margin:.5rem 0;}
+
+/* ── GAME 2: GOBLIN WORD SCRAMBLE ── */
+.scramble-word{
+  font-family:'Cinzel',serif;
+  font-size:clamp(2rem,8vw,3.5rem);
+  letter-spacing:.4em;
+  color:var(--gold2);
+  text-align:center;
+  animation:glow 3s infinite;
+  margin:1rem 0;
+}
+.scramble-hint{font-style:italic;color:var(--tp);text-align:center;font-size:1rem;margin-bottom:.8rem;opacity:.75;}
+.lives-row{display:flex;gap:.4rem;justify-content:center;margin:.5rem 0;}
+.heart{font-size:1.3rem;transition:opacity .3s;}
+.heart.lost{opacity:.2;}
+.scramble-options{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;max-width:400px;width:100%;margin:.8rem auto;}
+.scramble-btn{
+  font-family:'Cinzel',serif;font-size:.95rem;padding:.65rem 1rem;
+  background:linear-gradient(135deg,var(--stone),var(--stone2));
+  color:var(--parch);border:1px solid var(--gold-dim);border-radius:4px;cursor:pointer;
+  transition:all .2s;letter-spacing:.05em;
+}
+.scramble-btn:hover{background:linear-gradient(135deg,var(--stone2),#6a5a48);border-color:var(--gold);transform:translateY(-2px);}
+.scramble-btn.correct{background:linear-gradient(135deg,var(--green),#2d7a3a);border-color:var(--green2);animation:pulse .4s;}
+.scramble-btn.wrong{background:linear-gradient(135deg,var(--red),#a02020);border-color:var(--red2);animation:shake .4s;}
+.round-info{font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.1em;color:var(--gold-dim);text-align:center;margin-bottom:.3rem;}
+
+/* ── GAME 3: D20 CHALLENGE ── */
+.die-wrap{display:flex;flex-direction:column;align-items:center;margin:1rem 0;}
+.d20{
+  width:110px;height:110px;cursor:pointer;
+  background:linear-gradient(135deg,#1a0e28,#2d1a3e);
+  clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.5rem;font-family:'Cinzel',serif;font-weight:700;color:var(--gold2);
+  border:3px solid var(--gold-dim);
+  box-shadow:var(--glow-gold,0 0 20px rgba(212,160,23,.4));
+  transition:transform .2s;
+  user-select:none;
+  position:relative;
+}
+.d20:hover{transform:scale(1.08);}
+.d20.rolling{animation:spinDie .8s ease forwards;}
+.d20.rolling{pointer-events:none;}
+.d20-label{font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.15em;color:var(--parch2);margin-top:.4rem;opacity:.6;}
+.trivia-q{
+  font-size:1.1rem;line-height:1.7;text-align:center;
+  color:var(--tp);margin:1rem 0;font-style:italic;
+}
+.trivia-opts{display:flex;flex-direction:column;gap:.6rem;max-width:440px;width:100%;margin:.5rem auto;}
+.trivia-btn{
+  font-family:'Cinzel',serif;font-size:.9rem;padding:.6rem 1.2rem;
+  background:linear-gradient(135deg,var(--stone),var(--stone2));
+  color:var(--parch);border:1px solid var(--gold-dim);border-radius:4px;cursor:pointer;
+  transition:all .2s;letter-spacing:.04em;text-align:left;
+}
+.trivia-btn:hover:not(:disabled){background:linear-gradient(135deg,var(--stone2),#6a5a48);border-color:var(--gold);}
+.trivia-btn.correct{background:linear-gradient(135deg,var(--green),#2d7a3a);border-color:var(--green2);}
+.trivia-btn.wrong{background:linear-gradient(135deg,var(--red),#a02020);border-color:var(--red2);}
+.trivia-btn:disabled{cursor:default;opacity:.85;}
+.score-row{font-family:'Cinzel',serif;font-size:.9rem;color:var(--gold-dim);text-align:center;margin:.3rem 0;letter-spacing:.1em;}
+.modifier-badge{
+  display:inline-block;padding:.2rem .8rem;border-radius:20px;font-family:'Cinzel',serif;
+  font-size:.85rem;letter-spacing:.05em;margin:.3rem;
+}
+.mod-pos{background:rgba(46,204,113,.15);border:1px solid var(--green2);color:var(--green2);}
+.mod-neg{background:rgba(192,57,43,.15);border:1px solid var(--red2);color:var(--red2);}
+
+/* ── FINAL SCREEN ── */
+.trophy{font-size:5rem;animation:float 2.5s infinite,pop .6s ease;display:block;text-align:center;margin-bottom:1rem;}
+.final-msg{font-size:1.15rem;line-height:1.85;color:var(--tp);text-align:center;}
+.confetti-emoji{position:fixed;font-size:1.5rem;pointer-events:none;animation:fallDown linear forwards;}
+@keyframes fallDown{from{top:-40px;opacity:1}to{top:110vh;opacity:.5}}
+
+/* ── GATE OVERLAY ── */
+.gate-overlay{
+  position:fixed;inset:0;background:rgba(5,3,1,.92);z-index:100;
+  display:none;align-items:center;justify-content:center;
+  animation:fadeIn .4s ease;
+}
+.gate-overlay.open{display:flex;}
+
+/* ── UTIL ── */
+.spacer{margin-bottom:1rem;}
+.center{text-align:center;}
+.row{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:1rem;}
+.italic{font-style:italic;opacity:.75;}
+</style>
+</head>
+<body>
+
+<!-- Torch decorations -->
+<div class="torch tl">🔥</div>
+<div class="torch tr">🔥</div>
+<div class="torch bl">🔥</div>
+<div class="torch br">🔥</div>
+
+<!-- ════════════════════════════════════════
+     TITLE SCREEN
+════════════════════════════════════════ -->
+<div id="screen-title" class="screen active">
+  <div style="text-align:center;padding:2rem 1rem;">
+    <div class="dungeon-title">⚔️ The Dungeon of Forgotten Gifts ⚔️</div>
+    <div class="dungeon-sub">a birthday trial — for the brave and clever</div>
+    <div style="font-size:3.5rem;animation:float 2.8s infinite;margin:1.5rem 0;">🐉</div>
+    <div class="parch-card" style="max-width:580px;margin:0 auto 2rem;">
+      <div class="divider">✦ ✦ ✦</div>
+      <p style="font-size:1.1rem;line-height:1.9;color:var(--tp);text-align:center;">
+        <em>Brave adventurer — somewhere in this dungeon lies a treasure sealed away for thee.<br>
+        Three trials stand between thee and glory.<br>
+        But first… thou must answer the Riddle of the Vault.<br>
+        Only the worthy may pass.</em>
+      </p>
+      <div class="divider">✦ ✦ ✦</div>
+    </div>
+    <button class="btn btn-gold" onclick="showRiddle(1)">⚔️ &nbsp; Enter the Dungeon</button>
+    <p style="margin-top:1.2rem;font-size:.85rem;font-style:italic;opacity:.45;font-family:'Cinzel',serif;letter-spacing:.1em;">Three trials. One secret. Happy Birthday.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     RIDDLE GATE OVERLAY
+════════════════════════════════════════ -->
+<div id="gate-overlay" class="gate-overlay">
+  <div class="parch-card" style="max-width:640px;">
+    <div class="riddle-label" id="gate-label">⚔️ THE VAULT RIDDLE ⚔️</div>
+    <div class="divider">— ✦ —</div>
+    <div class="riddle-scroll" id="gate-riddle-text"></div>
+    <div class="riddle-label" style="margin-top:.8rem;">🔑 Speak the answer to open the gate:</div>
+    <div class="answer-row">
+      <input class="answer-input" id="gate-answer" type="text" placeholder="Type your answer…" onkeydown="if(event.key==='Enter')checkGate()">
+      <button class="btn btn-gold" onclick="checkGate()">Submit</button>
+    </div>
+    <div class="feedback" id="gate-feedback"></div>
+    <div id="key-reveal-section" style="display:none;">
+      <div class="key-reveal">
+        <div class="key-glyph" id="key-glyph">🗝️</div>
+        <div class="key-word" id="key-word">KEY OBTAINED</div>
+        <div class="key-desc" id="key-desc">Passage granted.</div>
+      </div>
+      <div class="row"><button class="btn btn-gold" id="gate-proceed-btn" onclick="proceedFromGate()">Enter Trial ➜</button></div>
+    </div>
+    <div class="row" id="gate-hint-row">
+      <button class="btn btn-stone" onclick="showHint()" style="font-size:.8rem;padding:.5rem 1.2rem;">🕯️ Use a Hint (costs 1 Heart)</button>
+    </div>
+    <div style="font-size:.85rem;font-style:italic;text-align:center;margin-top:.7rem;color:var(--red);font-family:'Cinzel',serif;" id="gate-hint-box"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 1: DRAGON MEMORY
+════════════════════════════════════════ -->
+<div id="screen-game1" class="screen">
+  <div style="width:90%;max-width:520px;margin:2rem auto;text-align:center;">
+    <div class="progress-row" id="prog1"><div class="progress-pip active"></div><div class="progress-pip"></div><div class="progress-pip"></div></div>
+    <div class="sect-title">🐉 Trial I: The Dragon's Hoard</div>
+    <div class="sect-sub">MATCH THE ENCHANTED PAIRS</div>
+    <div class="parch-card" style="padding:1.2rem 1.5rem;margin-bottom:1rem;">
+      <p style="font-size:1rem;color:var(--tp);line-height:1.7;text-align:center;">
+        <em>"The dragon has scattered his treasures across the vault. Find all matching pairs to claim your reward — but beware, his memory is sharp… and so must yours be."</em>
+      </p>
+    </div>
+    <div class="mem-stats">
+      <span>Moves: <b id="mem-moves">0</b></span>
+      <span>Pairs: <b id="mem-pairs">0</b>/12</span>
+      <span id="mem-timer-label">Time: <b id="mem-timer">0</b>s</span>
+    </div>
+    <div class="mem-grid" id="mem-grid"></div>
+    <div class="row">
+      <button class="btn btn-stone" onclick="initMemory()" style="margin-top:.8rem;font-size:.85rem;padding:.5rem 1.3rem;">🔄 Reshuffle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 2: GOBLIN SCRAMBLE
+════════════════════════════════════════ -->
+<div id="screen-game2" class="screen">
+  <div style="width:90%;max-width:520px;margin:2rem auto;text-align:center;">
+    <div class="progress-row" id="prog2"><div class="progress-pip done"></div><div class="progress-pip active"></div><div class="progress-pip"></div></div>
+    <div class="sect-title">👺 Trial II: The Goblin's Tongue</div>
+    <div class="sect-sub">UNSCRAMBLE THE CURSED WORDS</div>
+    <div class="parch-card" style="padding:1.2rem 1.5rem;margin-bottom:.8rem;">
+      <p style="font-size:1rem;color:var(--tp);line-height:1.7;text-align:center;">
+        <em>"A goblin sorcerer has hexed the dungeon's signs, scrambling all the words. Unscramble 7 words to break his curse. You have 2 lives and 30 seconds per word — choose swiftly."</em>
+      </p>
+    </div>
+    <div class="round-info">Round <span id="sc-round">1</span> of 7</div>
+    <div class="lives-row" id="sc-lives"></div>
+    <div class="scramble-word" id="sc-word"></div>
+    <div class="scramble-hint" id="sc-hint"></div>
+    <div class="scramble-options" id="sc-options"></div>
+    <div class="feedback" id="sc-feedback"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 3: D20 TRIVIA CHALLENGE
+════════════════════════════════════════ -->
+<div id="screen-game3" class="screen">
+  <div style="width:90%;max-width:560px;margin:2rem auto;text-align:center;">
+    <div class="progress-row" id="prog3"><div class="progress-pip done"></div><div class="progress-pip done"></div><div class="progress-pip active"></div></div>
+    <div class="sect-title">🎲 Trial III: The Oracle's D20</div>
+    <div class="sect-sub">ROLL FOR YOUR DESTINY</div>
+    <div class="parch-card" style="padding:1.2rem 1.5rem;margin-bottom:.8rem;">
+      <p style="font-size:1rem;color:var(--tp);line-height:1.7;text-align:center;">
+        <em>"The Oracle demands tribute — answer 7 questions of deep Dungeons & Dragons lore. Roll the D20 for fortune's blessing before each question. Only the truly knowledgeable shall pass."</em>
+      </p>
+    </div>
+    <div class="score-row">Score: <span id="d20-score">0</span> / 7 &nbsp;|&nbsp; Question <span id="d20-qnum">1</span>/7</div>
+    <div class="die-wrap">
+      <div class="d20" id="d20" onclick="rollDie()">🎲</div>
+      <div class="d20-label">CLICK TO ROLL</div>
+    </div>
+    <div id="d20-modifier-row" style="min-height:2rem;margin:.3rem 0;"></div>
+    <div id="d20-question-area" style="display:none;">
+      <div class="trivia-q" id="d20-question"></div>
+      <div class="trivia-opts" id="d20-options"></div>
+    </div>
+    <div class="feedback" id="d20-feedback"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     FINAL SCREEN
+════════════════════════════════════════ -->
+<div id="screen-final" class="screen">
+  <div style="width:90%;max-width:600px;margin:2rem auto;text-align:center;">
+    <span class="trophy">🏆</span>
+    <div class="dungeon-title" style="margin-bottom:.5rem;">Victory, Adventurer!</div>
+    <div class="dungeon-sub">THE DUNGEON HAS BEEN CONQUERED</div>
+    <div class="parch-card" style="margin:1.5rem auto;">
+      <div class="divider">✦ ✦ ✦</div>
+      <p class="final-msg">
+        <em>
+          Thou hast bested the Dragon's Hoard,<br>
+          broken the Goblin's curse,<br>
+          and answered the Oracle's riddles.<br><br>
+          The Vault Door swings open…<br><br>
+          <b>Inside waits thy true reward —</b><br>
+          soft, huggable, and made to be loved.<br>
+          The kind of treasure no dragon would dare hoard,<br>
+          for they are too precious for cold dungeon stone.<br><br>
+          <span style="font-size:1.3rem;">🧸 Happy Birthday, Adventurer! 🧸</span><br><br>
+          May thy rolls always be natural 20s.<br><br>
+          🍩🦎 Congratulations on thy donut/axolotl plushies! 🍩🦎
+        </em>
+      </p>
+      <div class="divider">✦ ✦ ✦</div>
+    </div>
+    <div id="final-score-box" style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold-dim);margin-bottom:1.2rem;letter-spacing:.08em;"></div>
+    <button class="btn btn-gold" onclick="restartGame()">⚔️ Play Again</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let currentGate = 0;
+let gateHintsUsed = 0;
+let hintHearts = 3;
+let proceedTarget = '';
+let gameScores = {mem:0, scramble:0, trivia:0};
+
+// ─── RIDDLES CONFIG ─────────────────────────────────────
+// Riddle answers are about plushies but never explicitly say "gift"
+const gates = [
+  {
+    id: 1,
+    label: '⚔️ THE VAULT RIDDLE — FIRST SEAL ⚔️',
+    riddle: `I have no voice, yet I speak volumes.<br>
+I have no heart, yet I hold endless love.<br>
+I am wrapped in secrecy, waiting to be unwrapped.<br><br>
+I am given on special days,<br>but I last forever.<br>
+I am the treasure that dragons would ignore,<br>but children cherish above gold.<br><br>
+<b>I am the gift that cannot be spent.<br>What am I?</b>`,
+    answer: ['gift','present','present','birthday gift','birthday present','surprise'],
+    hint: "Think of something given on special occasions that brings joy but cannot be used up.",
+    keyGlyph: '🗝️',
+    keyWord: 'FIRST KEY: SOFTHIDE',
+    keyDesc: 'The seal of the first vault cracks open…',
+    proceed: 'game1'
+  },
+  {
+    id: 2,
+    label: '⚔️ THE VAULT RIDDLE — SECOND SEAL ⚔️',
+    riddle: `I have glass eyes but see only memories.<br>
+I wear stitched smiles but know no joy.<br>
+I am filled with clouds but cannot float.<br><br>
+I am the monster that comforts children,<br>
+the beast that sleeps in their arms.<br>
+I am given as treasure, yet I cost no gold.<br><br>
+<b>I am soft version of fearsome creatures.<br>What am I?</b><br>
+<span style="font-size:.9rem;opacity:.7;">(Answer: what kind of toy am I?)</span>`,
+    answer: ['plushie','plush','stuffed animal','stuffed toy','soft toy','plushies','plush toy'],
+    hint: "Think of comfort made physical. Soft exterior, soft interior. Made to be held.",
+    keyGlyph: '🔑',
+    keyWord: 'SECOND KEY: COTTONCORE',
+    keyDesc: 'The second seal shatters. One remains…',
+    proceed: 'game2'
+  },
+  {
+    id: 3,
+    label: '⚔️ THE VAULT RIDDLE — FINAL SEAL ⚔️',
+    riddle: `I am round with a hole but I am not a ring.<br>
+I am sweet but I am not candy.<br>
+I have sprinkles but I am not ice cream.<br><br>
+I have gills but I am not a fish.<br>
+I smile always but I have no mouth.<br>
+I come from water but I cannot swim.<br><br>
+<b>I am the plushie that tastes like joy<br>or swims forever in your arms.<br>What am I?</b><br>
+<span style="font-size:.9rem;opacity:.7;">(Answer: what type of plush am I?)</span>`,
+    answer: ['donut','donut plush','donut plushie','doughnut','doughnut plush','axolotl','axolotl plush','axolotl plushie'],
+    hint: "Think of something round with a hole OR something with gills that always smiles. Both are made of fabric.",
+    keyGlyph: '💎',
+    keyWord: 'FINAL KEY: FLUFFBORN',
+    keyDesc: 'All three seals broken. The Vault is open.',
+    proceed: 'game3'
+  }
+];
+
+// ─── SCREEN MANAGEMENT ──────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ─── RIDDLE GATE ────────────────────────────────────────
+function showRiddle(gateNum) {
+  currentGate = gateNum;
+  gateHintsUsed = 0;
+  const g = gates[gateNum - 1];
+  document.getElementById('gate-label').innerHTML = g.label;
+  document.getElementById('gate-riddle-text').innerHTML = g.riddle;
+  document.getElementById('gate-answer').value = '';
+  document.getElementById('gate-feedback').textContent = '';
+  document.getElementById('gate-feedback').className = 'feedback';
+  document.getElementById('key-reveal-section').style.display = 'none';
+  document.getElementById('gate-hint-row').style.display = 'flex';
+  document.getElementById('gate-hint-box').textContent = '';
+  document.getElementById('gate-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('gate-answer').focus(), 400);
+}
+
+function checkGate() {
+  const g = gates[currentGate - 1];
+  const raw = document.getElementById('gate-answer').value.trim().toLowerCase();
+  const fb = document.getElementById('gate-feedback');
+
+  if (!raw) { fb.textContent = 'Speak an answer, adventurer!'; fb.className = 'feedback wrong'; return; }
+
+  // Add penalty for wrong answers
+  if (!g.answer.includes(raw)) {
+    hintHearts--;
+    if (hintHearts <= 0) {
+      fb.textContent = '💀 The vault rejects you completely. You must start over...';
+      fb.className = 'feedback wrong';
+      setTimeout(() => {
+        hintHearts = 3;
+        showScreen('title');
+        document.getElementById('gate-overlay').classList.remove('open');
+      }, 2000);
+      return;
+    }
+  }
+
+  if (g.answer.includes(raw)) {
+    fb.textContent = '✦ The vault door trembles… the seal is broken! ✦';
+    fb.className = 'feedback right';
+    document.getElementById('key-glyph').textContent = g.keyGlyph;
+    document.getElementById('key-word').textContent = g.keyWord;
+    document.getElementById('key-desc').textContent = g.keyDesc;
+    document.getElementById('key-reveal-section').style.display = 'block';
+    document.getElementById('gate-hint-row').style.display = 'none';
+    proceedTarget = g.proceed;
+  } else {
+    fb.textContent = `"That is not the answer the dungeon seeks…" Hearts remaining: ${hintHearts}`;
+    fb.className = 'feedback wrong';
+    document.getElementById('gate-answer').style.animation = 'none';
+    setTimeout(() => { document.getElementById('gate-answer').style.animation = ''; }, 10);
+  }
+}
+
+function showHint() {
+  const g = gates[currentGate - 1];
+  gateHintsUsed++;
+  hintHearts--;
+  if (hintHearts < 0) hintHearts = 0;
+  document.getElementById('gate-hint-box').textContent = '🕯️ Hint: ' + g.hint + ` (Hearts remaining: ${hintHearts})`;
+  document.getElementById('gate-hint-row').style.display = 'none';
+}
+
+function proceedFromGate() {
+  document.getElementById('gate-overlay').classList.remove('open');
+  if (proceedTarget === 'game1') { showScreen('game1'); initMemory(); }
+  else if (proceedTarget === 'game2') { showScreen('game2'); initScramble(); }
+  else if (proceedTarget === 'game3') { showScreen('game3'); initTrivia(); }
+}
+
+// GAME 1: DRAGON MEMORY
+// ════════════════════════════════════════════════════════
+const memEmojis = ['🐉','🗡️','🧙','🏰','🎲','🛡️','🗺️','🧝','👹','🕸️','⚰️','🔮'];
+let memFlipped = [], memMatched = 0, memMoves = 0, memLocked = false, memTimerInterval, memSeconds = 0, memPreviewTime = 3, memPenalty = 0;
+
+function initMemory() {
+  clearInterval(memTimerInterval);
+  memFlipped = []; memMatched = 0; memMoves = 0; memSeconds = 0; memLocked = false; memPenalty = 0;
+  document.getElementById('mem-moves').textContent = 0;
+  document.getElementById('mem-pairs').textContent = 0;
+  document.getElementById('mem-timer').textContent = 0;
+  const cards = [...memEmojis, ...memEmojis].sort(() => Math.random() - .5);
+  const grid = document.getElementById('mem-grid');
+  grid.innerHTML = '';
+  
+  // Show preview for 3 seconds
+  cards.forEach((emoji, i) => {
+    const c = document.createElement('div');
+    c.className = 'mem-card flipped';
+    c.dataset.emoji = emoji; c.dataset.index = i;
+    c.innerHTML = `<div class="front">${emoji}</div><div class="back">?</div>`;
+    c.onclick = () => flipCard(c);
+    grid.appendChild(c);
+  });
+  
+  // Hide cards after preview
+  setTimeout(() => {
+    document.querySelectorAll('.mem-card').forEach(card => {
+      card.classList.remove('flipped');
+    });
+  }, memPreviewTime * 1000);
+  
+  memTimerInterval = setInterval(() => {
+    memSeconds++;
+    document.getElementById('mem-timer').textContent = memSeconds;
+  }, 1000);
+}
+
+function flipCard(card) {
+  if (memLocked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  card.classList.add('flipped');
+  memFlipped.push(card);
+  if (memFlipped.length === 2) {
+    memMoves++;
+    document.getElementById('mem-moves').textContent = memMoves;
+    memLocked = true;
+    const [a, b] = memFlipped;
+    if (a.dataset.emoji === b.dataset.emoji) {
+      a.classList.add('matched'); b.classList.add('matched');
+      memMatched++;
+      document.getElementById('mem-pairs').textContent = memMatched;
+      memFlipped = []; memLocked = false;
+      if (memMatched === 12) {
+        clearInterval(memTimerInterval);
+        // Add penalty for mistakes
+        memPenalty = memMoves * 15;
+        gameScores.mem = Math.max(0, 2000 - memPenalty - memSeconds * 3);
+        setTimeout(() => showRiddle(2), 700);
+      }
+    } else {
+      setTimeout(() => {
+        a.classList.remove('flipped'); b.classList.remove('flipped');
+        memFlipped = []; memLocked = false;
+      }, 900);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// GAME 2: GOBLIN WORD SCRAMBLE
+// ════════════════════════════════════════════════════════
+const scrambleWords = [
+  { word: 'BEHEMOTH', hint: 'A colossal monster of immense size', wrong: ['HEMOTHBE','BEMOHTHE','HETOBMEH'] },
+  { word: 'NECROMANCER', hint: 'One who raises the dead', wrong: ['CROMANCEN','NEMOCRANER','CEROMNANCE'] },
+  { word: 'PHYLACTERY', hint: 'A lich\'s soul container', wrong: ['PHYLACTER','LAPYCRYTE','CERPHYLAT'] },
+  { word: 'INCANTATION', hint: 'Spoken magical words', wrong: ['CATIONTINC','TATIONCIN','INCANTTION'] },
+  { word: 'ABYSSAL', hint: 'From the deepest demonic plane', wrong: ['ABYLSAL','SALABYSS','BAYLASS'] },
+  { word: 'THAUMATURGY', hint: 'The art of working wonders', wrong: ['THAUMATURG','GURTHAMUTA','THAMUTURGY'] },
+  { word: 'CHRONOMANCY', hint: 'Magic of time manipulation', wrong: ['CHRONOMANC','MONOMANCY','CHRONMANCY'] },
+];
+let scIndex = 0, scLives = 2, scCorrect = 0, scTimeLimit = 30, scTimerInterval, scSeconds = 0;
+
+function scramble(w) {
+  let arr = w.split(''), s;
+  do { s = [...arr].sort(() => Math.random() - .5).join(''); } while (s === w);
+  return s;
+}
+
+function initScramble() {
+  scIndex = 0; scLives = 2; scCorrect = 0; scSeconds = 0;
+  clearInterval(scTimerInterval);
+  renderScramble();
+}
+
+function renderScramble() {
+  if (scIndex >= scrambleWords.length) {
+    clearInterval(scTimerInterval);
+    gameScores.scramble = scCorrect * 30;
+    showRiddle(3);
+    return;
+  }
+  const entry = scrambleWords[scIndex];
+  document.getElementById('sc-round').textContent = scIndex + 1;
+  document.getElementById('sc-word').textContent = scramble(entry.word);
+  document.getElementById('sc-hint').textContent = '🕯️ ' + entry.hint;
+  document.getElementById('sc-feedback').textContent = '';
+  document.getElementById('sc-feedback').className = 'feedback';
+
+  // Timer display
+  clearInterval(scTimerInterval);
+  scSeconds = 0;
+  const timerDisplay = document.createElement('div');
+  timerDisplay.id = 'sc-timer';
+  timerDisplay.style.cssText = 'text-align:center;font-family:"Cinzel",serif;font-size:0.9rem;color:var(--gold-dim);margin-bottom:0.5rem;';
+  timerDisplay.innerHTML = `Time: <b>${scSeconds}</b>s / ${scTimeLimit}s`;
+  
+  // Replace existing timer or add new one
+  const existingTimer = document.getElementById('sc-timer');
+  if (existingTimer) existingTimer.replaceWith(timerDisplay);
+  else document.getElementById('sc-word').parentNode.insertBefore(timerDisplay, document.getElementById('sc-word'));
+  
+  scTimerInterval = setInterval(() => {
+    scSeconds++;
+    timerDisplay.innerHTML = `Time: <b>${scSeconds}</b>s / ${scTimeLimit}s`;
+    if (scSeconds >= scTimeLimit) {
+      clearInterval(scTimerInterval);
+      scLives = 0;
+      scIndex++;
+      setTimeout(() => { scLives = 2; renderScramble(); }, 1500);
+    }
+  }, 1000);
+
+  // Lives display
+  const lv = document.getElementById('sc-lives');
+  lv.innerHTML = '';
+  for (let i = 0; i < 2; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart' + (i >= scLives ? ' lost' : '');
+    h.textContent = '❤️';
+    lv.appendChild(h);
+  }
+
+  // Options: correct + 3 wrong shuffled
+  const opts = [entry.word, ...entry.wrong].sort(() => Math.random() - .5);
+  const optsDiv = document.getElementById('sc-options');
+  optsDiv.innerHTML = '';
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'scramble-btn';
+    b.textContent = opt;
+    b.onclick = () => pickScramble(b, opt, entry.word, optsDiv);
+    optsDiv.appendChild(b);
+  });
+}
+
+function pickScramble(btn, chosen, correct, optsDiv) {
+  clearInterval(scTimerInterval);
+  optsDiv.querySelectorAll('button').forEach(b => b.disabled = true);
+  const fb = document.getElementById('sc-feedback');
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    fb.textContent = '✦ Correct! The curse weakens…';
+    fb.className = 'feedback right';
+    scCorrect++;
+    scIndex++;
+    setTimeout(renderScramble, 1100);
+  } else {
+    btn.classList.add('wrong');
+    scLives--;
+    if (scLives <= 0) {
+      fb.textContent = '💀 The goblin cackles — but you may still pass!';
+      fb.className = 'feedback wrong';
+      scIndex++;
+      setTimeout(() => { scLives = 2; renderScramble(); }, 1200);
+    } else {
+      fb.textContent = `Wrong! The answer was "${correct}". Lives left: ${scLives}`;
+      fb.className = 'feedback wrong';
+      scIndex++;
+      setTimeout(renderScramble, 1300);
+    }
+    // Highlight correct answer
+    optsDiv.querySelectorAll('button').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// GAME 3: D20 TRIVIA
+// ════════════════════════════════════════════════════════
+const triviaPool = [
+  { q: "What is the name of the primordial entity that embodies chaos in the D&D multiverse?", a: "Tharizdun", opts: ["Tharizdun", "Asmodeus", "Vecna", "Orcus"] },
+  { q: "In the cosmology of the Great Wheel, which plane connects all the Outer Planes?", a: "The Outlands", opts: ["The Astral Plane", "The Ethereal Plane", "The Outlands", "The Prime Material"] },
+  { q: "What is the term for a magical item that has gained sentience and autonomy?", a: "Intelligent item", opts: ["Sentient object", "Intelligent item", "Awakened device", "Living artifact"] },
+  { q: "Which deity is known as the 'Dawnmaster' and governs dawn, birth, and renewal?", a: "Lathander", opts: ["Lathander", "Pelor", "Sune", "Tymora"] },
+  { q: "What is the name of the magical field that prevents teleportation and planar travel in certain areas?", a: "Teleportation circle", opts: ["Warding field", "Teleportation circle", "Planar lock", "Dimensional anchor"] },
+  { q: "In D&D 5e, what is the maximum number of magic items a character can attune to simultaneously?", a: "3", opts: ["2", "3", "4", "6"] },
+  { q: "What is the name of the dragon goddess who represents all metallic dragons?", a: "Bahamut", opts: ["Tiamat", "Bahamut", "Sardior", "Io"] },
+  { q: "Which school of magic specializes in manipulating life forces and undead?", a: "Necromancy", opts: ["Necromancy", "Conjuration", "Abjuration", "Transmutation"] },
+  { q: "What is the term for a mortal who has undergone divine ascension to godhood?", a: "Ascended mortal", opts: ["Demigod", "Ascended mortal", "Divine mortal", "Godling"] },
+  { q: "In the Ravenloft setting, what is the name of the domain ruled by the vampire Strahd von Zarovich?", a: "Barovia", opts: ["Barovia", "Darkon", "Falkovnia", "Kartakass"] },
+  { q: "What is the name of the cosmic entity that represents pure law and absolute order?", a: "Mechanus", opts: ["Mechanus", "Arcadia", "Mount Celestia", "The Seven Heavens"] },
+  { q: "Which class feature allows a Rogue to use their bonus action to hide after making a ranged attack?", a: " Cunning Action", opts: ["Sneak Attack", "Cunning Action", "Uncanny Dodge", "Evasion"] },
+];
+let d20Questions = [], d20QIndex = 0, d20Score = 0, d20Rolled = false, d20Modifier = 0;
+
+function initTrivia() {
+  d20Questions = triviaPool.sort(() => Math.random() - .5).slice(0, 7);
+  d20QIndex = 0; d20Score = 0; d20Rolled = false; d20Modifier = 0;
+  document.getElementById('d20-score').textContent = 0;
+  document.getElementById('d20-qnum').textContent = 1;
+  document.getElementById('d20-question-area').style.display = 'none';
+  document.getElementById('d20-feedback').textContent = '';
+  document.getElementById('d20-modifier-row').innerHTML = '';
+  const die = document.getElementById('d20');
+  die.textContent = '🎲';
+  die.className = 'd20';
+  die.onclick = rollDie;
+}
+
+function rollDie() {
+  if (d20Rolled) return;
+  const die = document.getElementById('d20');
+  die.classList.add('rolling');
+  setTimeout(() => {
+    die.classList.remove('rolling');
+    const roll = Math.floor(Math.random() * 20) + 1;
+    die.textContent = roll;
+    die.onclick = null;
+
+    let modRow = document.getElementById('d20-modifier-row');
+    if (roll === 20) {
+      d20Modifier = 1;
+      modRow.innerHTML = '<span class="modifier-badge mod-pos">⚡ NATURAL 20! Lucky strike — one wrong answer removed!</span>';
+    } else if (roll === 1) {
+      d20Modifier = -1;
+      modRow.innerHTML = '<span class="modifier-badge mod-neg">💀 Critical Fail! All answers shuffled, no removal.</span>';
+    } else if (roll >= 18) {
+      d20Modifier = 0.5;
+      modRow.innerHTML = `<span class="modifier-badge mod-pos">✨ Roll ${roll} — Advantage! One decoy answer removed.</span>`;
+    } else {
+      d20Modifier = 0;
+      modRow.innerHTML = `<span class="modifier-badge" style="background:rgba(100,80,40,.2);border:1px solid var(--gold-dim);color:var(--gold-dim);">Roll ${roll} — No modifier.</span>`;
+    }
+    d20Rolled = true;
+    setTimeout(() => showTriviaQuestion(), 700);
+  }, 900);
+}
+
+function showTriviaQuestion() {
+  const q = d20Questions[d20QIndex];
+  document.getElementById('d20-question').textContent = q.q;
+
+  let opts = [...q.opts].sort(() => Math.random() - .5);
+
+  // Apply modifier
+  if (d20Modifier === 1 || d20Modifier === 0.5) {
+    // Remove one wrong answer
+    const wrongOpts = opts.filter(o => o !== q.a);
+    const toRemove = wrongOpts[Math.floor(Math.random() * wrongOpts.length)];
+    opts = opts.filter(o => o !== toRemove);
+  } else if (d20Modifier === -1) {
+    // Critical fail: shuffle all answers but don't remove any
+    opts = [...q.opts].sort(() => Math.random() - .5);
+  }
+
+  const container = document.getElementById('d20-options');
+  container.innerHTML = '';
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'trivia-btn';
+    b.textContent = opt;
+    b.onclick = () => pickTrivia(b, opt, q.a, container);
+    container.appendChild(b);
+  });
+
+  document.getElementById('d20-question-area').style.display = 'block';
+  document.getElementById('d20-feedback').textContent = '';
+}
+
+function pickTrivia(btn, chosen, correct, container) {
+  container.querySelectorAll('button').forEach(b => b.disabled = true);
+  const fb = document.getElementById('d20-feedback');
+  container.querySelectorAll('button').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    d20Score++;
+    document.getElementById('d20-score').textContent = d20Score;
+    fb.textContent = '✦ The Oracle nods in approval.';
+    fb.className = 'feedback right';
+  } else {
+    btn.classList.add('wrong');
+    fb.textContent = `The Oracle sighs… the answer was "${correct}"`;
+    fb.className = 'feedback wrong';
+    
+    // Reset score to 0 if wrong answer
+    d20Score = 0;
+    document.getElementById('d20-score').textContent = d20Score;
+  }
+
+  d20QIndex++;
+  if (d20QIndex >= 7) {
+    gameScores.trivia = d20Score * 25;
+    setTimeout(showFinal, 1400);
+  } else {
+    document.getElementById('d20-qnum').textContent = d20QIndex + 1;
+    d20Rolled = false;
+    const die = document.getElementById('d20');
+    die.textContent = '🎲'; die.className = 'd20'; die.onclick = rollDie;
+    document.getElementById('d20-modifier-row').innerHTML = '';
+    document.getElementById('d20-question-area').style.display = 'none';
+    setTimeout(() => { fb.textContent = ''; }, 1000);
+  }
+}
+
+// ─── FINAL SCREEN ───────────────────────────────────────
+function showFinal() {
+  showScreen('final');
+  const total = gameScores.mem + gameScores.scramble + gameScores.trivia;
+  document.getElementById('final-score-box').innerHTML =
+    `Memory: ${gameScores.mem} pts &nbsp;|&nbsp; Scramble: ${gameScores.scramble} pts &nbsp;|&nbsp; Trivia: ${gameScores.trivia} pts<br>
+    <span style="font-size:1.2rem;color:var(--gold2);">Total Hoard: ${total} Gold Pieces</span>`;
+  spawnConfetti();
+}
+
+function spawnConfetti() {
+  const icons = ['🎉','⭐','🎲','⚔️','🐉','✨','🎊','🗡️'];
+  for (let i = 0; i < 24; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-emoji';
+    el.textContent = icons[Math.floor(Math.random() * icons.length)];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.animationDuration = (2 + Math.random() * 3) + 's';
+    el.style.animationDelay = (Math.random() * 2) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 6000);
+  }
+}
+
+function restartGame() {
+  gameScores = {mem:0, scramble:0, trivia:0};
+  showScreen('title');
+}
+</script>
+</body>
+</html>
