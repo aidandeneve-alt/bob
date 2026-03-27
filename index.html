@@ -908,9 +908,16 @@ function showTriviaQuestion() {
 function pickTrivia(btn, chosen, correct, container) {
   container.querySelectorAll('button').forEach(b => b.disabled = true);
   const fb = document.getElementById('d20-feedback');
-  container.querySelectorAll('button').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+  
+  // Normalize answers for comparison (trim whitespace and lowercase)
+  const normalizedChosen = chosen.trim().toLowerCase();
+  const normalizedCorrect = correct.trim().toLowerCase();
+  
+  container.querySelectorAll('button').forEach(b => { 
+    if (b.textContent.trim().toLowerCase() === normalizedCorrect) b.classList.add('correct'); 
+  });
 
-  if (chosen === correct) {
+  if (normalizedChosen === normalizedCorrect) {
     btn.classList.add('correct');
     d20Score++;
     document.getElementById('d20-score').textContent = d20Score;
@@ -921,9 +928,11 @@ function pickTrivia(btn, chosen, correct, container) {
     fb.textContent = `The Oracle sighs… the answer was "${correct}"`;
     fb.className = 'feedback wrong';
     
-    // Reset score to 0 if wrong answer
+    // Reset score to 0 and go back to question 1 if wrong answer
     d20Score = 0;
+    d20QIndex = 0;
     document.getElementById('d20-score').textContent = d20Score;
+    document.getElementById('d20-qnum').textContent = 1;
   }
 
   d20QIndex++;
