@@ -828,6 +828,20 @@ const triviaPool = [
   { q: "In the Ravenloft setting, what is the name of the domain ruled by the vampire Strahd von Zarovich?", a: "Barovia", opts: ["Barovia", "Darkon", "Falkovnia", "Kartakass"] },
   { q: "What is the name of the cosmic entity that represents pure law and absolute order?", a: "Mechanus", opts: ["Mechanus", "Arcadia", "Mount Celestia", "The Seven Heavens"] },
   { q: "Which class feature allows a Rogue to use their bonus action to hide after making a ranged attack?", a: " Cunning Action", opts: ["Sneak Attack", "Cunning Action", "Uncanny Dodge", "Evasion"] },
+  { q: "What is the name of the fiend that serves as the ultimate law enforcer in the Nine Hells?", a: "Dispater", opts: ["Dispater", "Asmodeus", "Geryon", "Levistus"] },
+  { q: "Which artifact is known as the 'Eye of Vecna' and grants immense power?", a: "Eye of Vecna", opts: ["Eye of Vecna", "Hand of Vecna", "Staff of the Magi", "Rod of Seven Parts"] },
+  { q: "What is the name of the elven deity of magic and arcane knowledge?", a: "Corellon Larethian", opts: ["Corellon Larethian", "Sehanine Moonbow", "Erevan Ilesere", "Labelas Enoreth"] },
+  { q: "What is the term for the magical energy that flows through the multiverse?", a: "Weave", opts: ["Weave", "Mana", "Arcane energy", "Magical field"] },
+  { q: "Which creature is immune to all damage and can only be killed by a specific artifact?", a: "Tarrasque", opts: ["Tarrasque", "Ancient Red Dragon", "Dracolich", "Aspect of Tiamat"] },
+  { q: "What is the name of the goblin deity of trickery and cunning?", a: "Maglubiyet", opts: ["Maglubiyet", "Gruumsh", "Khurgor", "Bhalla"] },
+  { q: "What is the term for a wizard's spellbook that contains their entire magical knowledge?", a: "Spellbook", opts: ["Spellbook", "Grimoire", "Arcane tome", "Magic codex"] },
+  { q: "Which plane is home to the slaadi and embodies pure chaos?", a: "Limbo", opts: ["Limbo", "The Abyss", "Pandemonium", "The Abyss"] },
+  { q: "What is the name of the dwarven deity of creation and craftsmanship?", a: "Moradin", opts: ["Moradin", "Helm", "Oghma", "Tyr"] },
+  { q: "What is the term for the magical phenomenon where wild magic surges unpredictably?", a: "Wild magic surge", opts: ["Wild magic surge", "Magic storm", "Arcane eruption", "Spell chaos"] },
+  { q: "Which artifact allows travel between planes when assembled?", a: "Rod of Seven Parts", opts: ["Rod of Seven Parts", "Staff of the Magi", "Cube of Force", "Sphere of Annihilation"] },
+  { q: "What is the name of the halfling deity of luck and adventure?", a: "Yondalla", opts: ["Yondalla", "Arvoreen", "Sheela Peryroyl", "Cyrrollalee"] },
+  { q: "What is the term for a magical curse that transforms victims into beasts?", a: "Lycanthropy", opts: ["Lycanthropy", "Polymorph", "Curse of beasts", "Animal transformation"] },
+  { q: "Which celestial represents the ultimate form of law and good?", a: "Solar", opts: ["Solar", "Planetar", "Deva", "Archon"] },
 ];
 let d20Questions = [], d20QIndex = 0, d20Score = 0, d20Rolled = false, d20Modifier = 0;
 
@@ -928,8 +942,9 @@ function pickTrivia(btn, chosen, correct, container) {
     fb.textContent = `The Oracle sighs… the answer was "${correct}"`;
     fb.className = 'feedback wrong';
     
-    // Reset score to 0 and go back to question 1 if wrong answer
+    // Reset score to 0 and restart with 7 new questions if wrong answer
     d20Score = 0;
+    d20Questions = triviaPool.sort(() => Math.random() - .5).slice(0, 7);
     d20QIndex = 0;
     document.getElementById('d20-score').textContent = d20Score;
     document.getElementById('d20-qnum').textContent = 1;
