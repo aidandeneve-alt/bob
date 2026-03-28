@@ -341,7 +341,7 @@ body{
       </p>
       <div class="divider">✦ ✦ ✦</div>
     </div>
-    <button class="btn btn-gold" onclick="showRiddle(1)">⚔️ &nbsp; Enter the Dungeon</button>
+    <button class="btn btn-gold" onclick="showRiddle(1)" id="enter-dungeon-btn">⚔️ &nbsp; Enter the Dungeon</button>
     <p style="margin-top:1.2rem;font-size:.85rem;font-style:italic;opacity:.45;font-family:'Cinzel',serif;letter-spacing:.1em;">Three trials. One secret. Happy Birthday.</p>
   </div>
 </div>
@@ -957,6 +957,8 @@ function pickTrivia(btn, chosen, correct, container) {
     die.className = 'd20'; 
     die.onclick = rollDie;
 
+  }
+
   d20QIndex++;
   if (d20QIndex >= 7) {
     gameScores.trivia = d20Score * 25;
@@ -995,6 +997,15 @@ function spawnConfetti() {
     setTimeout(() => el.remove(), 6000);
   }
 }
+
+// ─── INITIALIZATION ─────────────────────────────────────
+// Initialize the enter button after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  const enterBtn = document.getElementById('enter-dungeon-btn');
+  if (enterBtn) {
+    enterBtn.onclick = () => showRiddle(1);
+  }
+});
 
 function restartGame() {
   gameScores = {mem:0, scramble:0, trivia:0};
